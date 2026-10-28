@@ -1,0 +1,56 @@
+# ls-values.yaml
+global:
+  image:
+    repository: heartexlabs/label-studio
+    tag: "1.23.2"        # figée : avec "" le chart peut downgrader au prochain upgrade
+
+  pgConfig:
+    host: "postgres-service.database.svc.cluster.local"
+    port: 5555
+    dbName: "labelstudio"
+    userName: "labelstudio"
+    password:
+      secretName: "ls-db-secret"
+      secretKey: "password"
+
+  extraEnvironmentVars:
+    LABEL_STUDIO_HOST: "http://localhost:8508"   # URL vue par le navigateur
+    LABEL_STUDIO_USERNAME: "admin@admin.com"
+    LABEL_STUDIO_PASSWORD: "admin"
+    DATA_UPLOAD_MAX_NUMBER_FILES: "10000"
+    LABEL_STUDIO_DISABLE_SIGNUP_WITHOUT_LINK: "true"
+    USE_DEFAULT_BANNED_SUBNETS: "false"          # autorise MinIO (IP 10.x du cluster)
+    ML_BLOCK_LOCAL_IP: "false"                   # autorise le ML backend du cluster
+
+  # Médias sur un PVC (pas MinIO : les URLs pré-signées seraient injoignables depuis l'hôte)
+  persistence:
+    enabled: true
+    type: volume
+    config:
+      volume:
+        size: 10Gi
+        accessModes:
+          - ReadWriteOnce
+        resourcePolicy: "keep"   # le PVC survit à `helm uninstall`
+
+app:
+  deploymentStrategy:
+    type: Recreate               # PVC ReadWriteOnce
+
+  service:
+    type: LoadBalancer
+    port: 8508
+    targetPort: 8085             # nginx dans le pod
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 2Gi
+
+postgresql:
+  enabled: false
+
+redis:
+  enabled: false
